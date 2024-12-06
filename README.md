@@ -27,4 +27,24 @@ Currently the decoder is constructed by listing the nodes which each edge of the
 
 ## Example
 
-{!examples/bpsk.f90}
+In the examples folder, you can find an example BPSK transmission.
+You can run the example with `fpm` or with `make`
+- `fpm run --example`
+- `make examples` (you may need to install some external libraries)
+
+## Tests
+
+The library is shipped with a couple of tests, which you can run again with `fpm` or with `make`:
+- `fpm test`
+- `make test` (you may need to install some external libraries)
+
+## Install
+
+### with FPM
+
+`fpm install [--profile release]`
+
+### with make
+
+`make install` (you may need to install some external libraries)
+
