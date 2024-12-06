@@ -1,0 +1,41 @@
+name="fldpc"
+description="LDPC decoder in Fortran"
+license="GPL-3.0-or-later"
+author="Marco Origlia"
+copyright="Copyright 2024, Marco Origlia"
+
+
+
+[build]
+auto-executables = false
+auto-examples = false
+auto-tests = false
+
+
+[library]
+source-dir="src"
+
+
+[install]
+library = true
+
+
+[[test]]
+name = "ldpc"
+source-dir = "test"
+main = "main.f90"
+
+
+[test.dependencies]
+test-drive = { git="https://github.com/fortran-lang/test-drive.git", tag="v0.5.0" }
+
+
+[[example]]
+name = "bpsk"
+source-dir = "examples"
+main = "bpsk.f90"
+
+
+[example.dependencies]
+stdlib = { git="https://github.com/fortran-lang/stdlib", branch="stdlib-fpm" }
+IO-Fortran-Library = { git="https://github.com/acbbullock/IO-Fortran-Library", branch="main" }
