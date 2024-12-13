@@ -2,6 +2,7 @@ module test_decoder_suite
   use iso_c_binding, only: wp => c_double
   use ldpc_decoder, only: TDecoder, process_vnode, process_cnode, llr_to_word
   use testdrive, only : new_unittest, unittest_type, error_type, check, test_failed
+  use io_fortran_lib, only: from_file
   implicit none
 
   private
@@ -19,7 +20,8 @@ contains
          new_unittest("Test Destructor", test_destructor),&
          new_unittest("Node processing", test_processing),&
          new_unittest("Word to synd", test_word_to_synd),&
-         new_unittest("LLR to word", test_llr_to_word)&
+         new_unittest("LLR to word", test_llr_to_word),&
+         new_unittest("Test decoding correct word", test_decode)&
          ]
   end subroutine collect_suite
 
@@ -99,7 +101,7 @@ contains
     end block !should not yield segfault
 
     block
-      type(TDecoder) :: decoder    
+      type(TDecoder) :: decoder
       decoder = TDecoder(16, e_to_v, e_to_c)
     end block
   end subroutine test_destructor
@@ -118,7 +120,7 @@ contains
     real(wp) :: llr_updated(8)
     
     e_to_c = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 4]
-    e_to_v = [0, 2, 4, 7, 1, 3, 5, 0, 1, 5, 2, 6, 3, 4, 6, 7]    
+    e_to_v = [0, 2, 4, 7, 1, 3, 5, 0, 1, 5, 2, 6, 3, 4, 6, 7]
     decoder = TDecoder(16, e_to_v, e_to_c)
 
     m_c_to_v(:) = 0_wp
@@ -168,7 +170,7 @@ contains
     
 
     e_to_c = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 4]
-    e_to_v = [0, 2, 4, 7, 1, 3, 5, 0, 1, 5, 2, 6, 3, 4, 6, 7]    
+    e_to_v = [0, 2, 4, 7, 1, 3, 5, 0, 1, 5, 2, 6, 3, 4, 6, 7]
     decoder = TDecoder(16, e_to_v, e_to_c)
 
     word = [.true., .false., .true., .true., .false., .true., .false., .false.]
@@ -191,6 +193,56 @@ contains
 
     call check(error, all(word .eqv. [.false., .true., .false., .false., .true., .true., .false., .true.]))
   end subroutine test_llr_to_word
-    
+
+
+  subroutine test_decode(error)
+    type(error_type), allocatable, intent(out) :: error
+
+    type(TDecoder)        :: decoder
+    integer, allocatable  :: edges(:,:)
+    real(wp), allocatable :: x(:), lappr(:), lappr_upd(:)
+    logical, allocatable  :: word(:), synd(:)
+
+    integer :: i, N_iterations
+
+    call from_file( &
+         file="examples/dvbs2ldpc0.500.csv", &
+         into=edges, &
+         header=.true.)
+
+    decoder = TDecoder( &
+         edges(1,1),    &
+         edges(2:, 2),  &
+         edges(2:, 3))
+
+    allocate(x(decoder%vnum))
+    allocate(lappr(decoder%vnum))
+    allocate(lappr_upd(decoder%vnum))
+    allocate(word(decoder%vnum))
+    allocate(synd(decoder%cnum))
+
+    call random_number(x)
+
+    do i = 1, decoder%vnum
+       if (x(i) < 0.5) then
+          x(i)    = 1
+          word(i) = .false.
+       else
+          x(i)    = -1
+          word(i) = .true.
+       end if
+    end do
+    synd = decoder%word_to_synd(word)
+
+    call random_number(lappr)
+    lappr = lappr*0.5d+00 + x - 0.25d+00 ! |lappr - x| <= 0.25
+
+    N_iterations = 50
+    call decoder%decode(lappr, lappr_upd, synd, N_iterations)
+    call check(error, N_iterations, 0)
+    if (allocated(error)) return
+
+    call check(error, all(lappr ==  lappr_upd))
+  end subroutine test_decode
 
 end module test_decoder_suite

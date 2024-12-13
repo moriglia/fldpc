@@ -28,6 +28,7 @@ main = "main.f90"
 
 [test.dependencies]
 test-drive = { git="https://github.com/fortran-lang/test-drive.git", tag="v0.5.0" }
+IO-Fortran-Library = { git="https://github.com/acbbullock/IO-Fortran-Library", branch="main" }
 
 
 [[example]]
