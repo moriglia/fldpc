@@ -33,6 +33,9 @@ contains
     call check(error, allocated(el%data))
     if (allocated(error)) return
 
+    call check(error, size(el%data), 5)
+    if (allocated(error)) return
+
     el%data(5) = 3 ! Should not segfault
 
 
@@ -43,7 +46,10 @@ contains
     call check(error, allocated(el%data))
     if (allocated(error)) return
 
-    el%data(9) = 0 ! Should not segfault    
+    call check(error, size(el%data), 9)
+    if (allocated(error)) return
+
+    el%data(9) = 0 ! Should not segfault
   end subroutine test_ldpc_edge_list_construction
 
 

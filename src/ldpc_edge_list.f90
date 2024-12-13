@@ -33,6 +33,8 @@ contains
     integer, intent(in) :: N
     type(TEdgeList) :: buffer
 
+    if (allocated(buffer%data)) deallocate(buffer%data)
+
     buffer%N=N
     allocate(buffer%data(N))
   end function TEdgeListConstructor
