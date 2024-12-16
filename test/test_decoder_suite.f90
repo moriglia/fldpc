@@ -37,7 +37,7 @@ contains
     e_to_c = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 4]
     e_to_v = [0, 2, 4, 7, 1, 3, 5, 0, 1, 5, 2, 6, 3, 4, 6, 7]
 
-    
+
     decoder = TDecoder(16, e_to_v, e_to_c)
 
     call check(error, decoder%Ne, 16)
@@ -48,7 +48,7 @@ contains
 
     call check(error, decoder%vnum, 8)
     if (allocated(error)) return
-    
+
     call check(error, allocated(decoder%c_to_e))
     if (allocated(error)) return
 
@@ -63,26 +63,32 @@ contains
 
     call check(error, all(decoder%c_to_e(1)%data == [1, 2, 3, 4]))
     if (allocated(error)) return
-    
+
     call check(error, all(decoder%c_to_v(1)%data == [1, 3, 5, 8]))
     if (allocated(error)) return
 
     call check(error, all(decoder%c_to_e(5)%data == [13, 14, 15, 16]))
     if (allocated(error)) return
-    
+
     call check(error, all(decoder%c_to_v(5)%data == [4, 5, 7, 8]))
     if (allocated(error)) return
 
     call check(error, all(decoder%v_to_e(1)%data == [1, 8]))
     if (allocated(error)) return
-    
+
     call check(error, all(decoder%v_to_c(1)%data == [1, 3]))
     if (allocated(error)) return
 
     call check(error, all(decoder%v_to_e(5)%data == [3, 14]))
     if (allocated(error)) return
-    
+
     call check(error, all(decoder%v_to_c(5)%data == [1, 5]))
+    if (allocated(error)) return
+
+    call check(error, all(decoder%v_to_c(8)%data == [1,5]))
+    if (allocated(error)) return
+
+    call check(error, all(decoder%v_to_e(8)%data == [4,16]))
   end subroutine test_ldpc_decoder_construction
 
 
@@ -105,7 +111,7 @@ contains
       decoder = TDecoder(16, e_to_v, e_to_c)
     end block
   end subroutine test_destructor
-  
+
   subroutine test_processing(error)
     type(error_type), allocatable, intent(out) :: error
 
@@ -118,7 +124,7 @@ contains
     real(wp) :: m_v_to_c(16)
     real(wp) :: llr(8)
     real(wp) :: llr_updated(8)
-    
+
     e_to_c = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 4]
     e_to_v = [0, 2, 4, 7, 1, 3, 5, 0, 1, 5, 2, 6, 3, 4, 6, 7]
     decoder = TDecoder(16, e_to_v, e_to_c)
@@ -167,14 +173,14 @@ contains
 
     logical :: word(8)
     logical :: synd(5)
-    
+
 
     e_to_c = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 4]
     e_to_v = [0, 2, 4, 7, 1, 3, 5, 0, 1, 5, 2, 6, 3, 4, 6, 7]
     decoder = TDecoder(16, e_to_v, e_to_c)
 
     word = [.true., .false., .true., .true., .false., .true., .false., .false.]
-    
+
     synd = decoder%word_to_synd(word)
 
     call check(error, all(synd(:) .eqv. [.false., .false., .false., .true., .true.]))
@@ -186,9 +192,9 @@ contains
 
     real(wp) :: llr(8)
     logical :: word(8)
-    
+
     llr = real([0.3, -0.9, 1.1, 9.2, -7.4, -5.4, 3.2, -1.1], wp)
-    
+
     word = llr_to_word(8, llr)
 
     call check(error, all(word .eqv. [.false., .true., .false., .false., .true., .true., .false., .true.]))

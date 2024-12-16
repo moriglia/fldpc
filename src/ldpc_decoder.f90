@@ -44,7 +44,7 @@ module ldpc_decoder
 
 contains
   ! ------------------------------
-  ! --- Construction and setup --- 
+  ! --- Construction and setup ---
   ! ------------------------------
   function TDecoderConstructor(N, e_to_v, e_to_c) result(decoder)
     type(TDecoder) :: decoder
@@ -101,10 +101,10 @@ contains
        x_to_e(j)%data(xcount(j)) = i
        xcount(j) = xcount(j) - 1
     end do
-    
+
   end subroutine invert_table
 
-  
+
   subroutine edge_to_node_convert_table(N, x_to_e, Ne, e_to_y, x_to_y)
     integer, intent(in) :: N
     type(TEdgeList), intent(in) :: x_to_e(N)
@@ -122,10 +122,10 @@ contains
     end do
   end subroutine edge_to_node_convert_table
 
-  
+
   subroutine destructor(decoder)
     type(TDecoder) :: decoder
-    
+
     if (allocated(decoder%c_to_e)  ) deallocate(decoder%c_to_e)
     if (allocated(decoder%v_to_e)  ) deallocate(decoder%v_to_e)
     if (allocated(decoder%v_to_c)  ) deallocate(decoder%v_to_c)
@@ -147,7 +147,7 @@ contains
   ! --------------------------------
   ! --- Message passing routines ---
   ! --------------------------------
-  
+
   subroutine process_xnode(buffer_x_to_y, Ne, m_in, m_out, f_plus_kind, total, B_buffer, F_buffer)
     ! Generic processing function, it works both for variable- and for check- nodes
     ! - for variable nodes, f_plus_kind is a simple addition routine
@@ -179,19 +179,19 @@ contains
     integer :: i, j, N
 
     N = buffer_x_to_y%N
-    
+
     if (present(B_buffer)) then
        buffer_bwd => B_buffer
     else
        allocate(buffer_bwd(2:N))
     end if
-    
+
     if (present(F_buffer)) then
        buffer_fwd => F_buffer
     else
        allocate(buffer_fwd(N-1))
     end if
-    
+
     buffer_fwd(1) = m_in(buffer_x_to_y%data(1))
     j = 1
     do i=2, N - 1
@@ -263,15 +263,17 @@ contains
           call process_xnode(buffer_v_to_e, Ne, m_c_to_v, m_v_to_c, f_plus_add, total)
        end if
     else
-       total = 0.0d0
+       total = m_c_to_v(buffer_v_to_e%data(1))
+       m_v_to_c(buffer_v_to_e%data(1)) = 0
     end if
-    
+
     do i = 1, buffer_v_to_e%N
        m_v_to_c(buffer_v_to_e%data(i)) = m_v_to_c(buffer_v_to_e%data(i)) + llr_channel
     end do
 
     llr_updated = total + llr_channel
   end subroutine process_vnode
+
 
   subroutine process_cnode(buffer_c_to_e, s, Ne, m_v_to_c, m_c_to_v, B_buffer, F_buffer)
     type(TEdgeList), intent(in) :: buffer_c_to_e
@@ -291,7 +293,7 @@ contains
     else
        sign_factor = 1.0_wp
     end if
-    
+
     if (buffer_c_to_e%N < 2) then
        ! Very unlikely code design: it means a specific bit is known through the syndrome
        m_c_to_v(buffer_c_to_e%data(1)) = sign_factor * 1e300_wp
@@ -303,7 +305,7 @@ contains
     else
        call process_xnode(buffer_c_to_e, Ne, m_v_to_c, m_c_to_v, f_plus_box)
     end if
-    
+
     do i = 1, buffer_c_to_e%N
        m_c_to_v(buffer_c_to_e%data(i)) = m_c_to_v(buffer_c_to_e%data(i)) * sign_factor
     end do
@@ -319,13 +321,13 @@ contains
     integer :: i, j
 
     check_llr = .true.
-    
+
     checknode_loop : do i = 1, this%cnum
        p = .false.
        do j = 1, this%c_to_v(i)%N
           p = p .xor. (llr(this%c_to_v(i)%data(j)) < 0.0d0)
        end do
-       
+
        if (xor(p, synd(i))) then
           check_llr = .false.
           exit checknode_loop
@@ -336,7 +338,7 @@ contains
   ! --------------------------------------------------
   ! --- Helpers for orther programs and simulators ---
   ! --------------------------------------------------
-  
+
   function word_to_synd(this, word) result(synd)
     class(TDecoder) :: this
     logical, intent(in) :: word(this%vnum)
@@ -375,7 +377,7 @@ contains
 
     real(wp) :: m_c_to_v(this%Ne), m_v_to_c(this%Ne)
     integer :: it, i
-    
+
     if (this%check_llr(llr_channel, synd)) then
        llr_updated = llr_channel
        N_iterations = 0
@@ -393,7 +395,7 @@ contains
           call process_cnode(this%c_to_e(i), synd(i), this%Ne, m_v_to_c, m_c_to_v, &
                this%B_buffer, this%F_buffer)
        end do
-       
+
        do i = 1, this%vnum
           call process_vnode(this%v_to_e(i), llr_channel(i), llr_updated(i), this%Ne, m_c_to_v, m_v_to_c, &
                this%B_buffer, this%F_buffer)
