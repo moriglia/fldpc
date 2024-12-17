@@ -14,13 +14,21 @@
 !    You should have received a copy of the GNU General Public License
 !    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 module ldpc_edge_list
+  !! author: Marco Origlia
+  !! license: GPL-3.0-or-later
+  !!
+  !! This module provides the TEdgeList class
   implicit none
 
   public :: TEdgeList
-  
+
   type, public :: TEdgeList
+     !! List of connected Edges or Nodes
      integer :: N
+     !! Numbe of connected edges or nodes
      integer, allocatable :: data(:)
+     !! Array containing the integer IDs of the connected
+     !! integers or nodes
    contains
      final :: destructor
   end type TEdgeList
@@ -30,8 +38,11 @@ module ldpc_edge_list
   end interface TEdgeList
 contains
   function TEdgeListConstructor(N) result (buffer)
+    !! Constructor of TEdgeList
     integer, intent(in) :: N
+    !! Number of connected edges or nodes
     type(TEdgeList) :: buffer
+    !! Edge list
 
     if (allocated(buffer%data)) deallocate(buffer%data)
 
@@ -40,9 +51,10 @@ contains
   end function TEdgeListConstructor
 
   subroutine destructor(buffer)
+    !! Should be called automatically
     type(TEdgeList) :: buffer
-    
+    !! The TEdgeList object to be destroyed
+
     if (allocated(buffer%data)) deallocate(buffer%data)
   end subroutine destructor
-  
 end module ldpc_edge_list
