@@ -6,7 +6,7 @@ github: https://github.com/moriglia
 project_github: https://github.com/moriglia/fldpc
 src_dir: ./src
 page_dir: ./doc
-output_dir: ./doc-output
+output_dir: ./docs
 license: by-sa
 preprocess: false
 predocmark: >
