@@ -199,10 +199,6 @@ contains
     !! List of edges "y" connected to node "x"
     integer, intent(in)       :: Ne
     !! Number of edges
-    ! real(wp), intent(in)      :: m_in(Ne)
-    ! !! Input messages
-    ! real(wp), intent(out)     :: m_out(Ne)
-    ! !! Output messages
     real(wp), intent(inout) :: m_inout(Ne)
     !! Input messages, updated with the output messages
     interface
@@ -315,10 +311,6 @@ contains
     !! of the variable node after processing
     integer, intent(in)   :: Ne
     !! Total number of edges in the LDPC code
-    ! real(wp), intent(in)  :: m_c_to_v(Ne)
-    ! !! Array of messages from check-nodes
-    ! real(wp), intent(out) :: m_v_to_c(Ne)
-    ! !! Array of messages to check-nodes
     real(wp), intent(inout) :: m_inout(Ne)
     !! Array of input messages, to be updated with output messages, one per edge
     real(wp), intent(inout), target, optional :: B_buffer(2:buffer_v_to_e%N)
@@ -356,10 +348,6 @@ contains
     !! Syndrome bit value associated to the checknode being currently processed
     integer, intent(in)   :: Ne
     !! Total number of edges in the LDPC code
-    ! real(wp), intent(in)  :: m_v_to_c(Ne)
-    ! !! Array of messages from variable nodes
-    ! real(wp), intent(out) :: m_c_to_v(Ne)
-    ! !! Array of messages to variable nodes
     real(wp), intent(inout) :: m_inout(Ne)
     !! Message buffer
     real(wp), intent(inout), target, optional :: B_buffer(2:buffer_c_to_e%N)
