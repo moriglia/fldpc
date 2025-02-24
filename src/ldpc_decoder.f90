@@ -188,7 +188,7 @@ contains
   ! --- Message passing routines ---
   ! --------------------------------
 
-  subroutine process_xnode(buffer_x_to_y, Ne, m_in, m_out, f_plus_kind, total, B_buffer, F_buffer)
+  subroutine process_xnode(buffer_x_to_y, Ne, m_inout, f_plus_kind, total, B_buffer, F_buffer)
     !! Generic processing function, it works both for variable- and for check- nodes
     !! - for variable nodes, f_plus_kind is a simple addition routine
     !! - for check nodes, f_plus_kind can be:
@@ -199,10 +199,8 @@ contains
     !! List of edges "y" connected to node "x"
     integer, intent(in)       :: Ne
     !! Number of edges
-    real(wp), intent(in)      :: m_in(Ne)
-    !! Input messages
-    real(wp), intent(out)     :: m_out(Ne)
-    !! Output messages
+    real(wp), intent(inout) :: m_inout(Ne)
+    !! Input messages, updated with the output messages
     interface
        pure function f_real_real(x, y) result (z)
          import wp
@@ -230,6 +228,7 @@ contains
 
     N = buffer_x_to_y%N
 
+    ! Initialize buffers
     if (present(B_buffer)) then
        buffer_bwd => B_buffer
     else
@@ -242,30 +241,35 @@ contains
        allocate(buffer_fwd(N-1))
     end if
 
-    buffer_fwd(1) = m_in(buffer_x_to_y%data(1))
+    ! Fill the forward buffer
+    buffer_fwd(1) = m_inout(buffer_x_to_y%data(1))
     j = 1
     do i=2, N - 1
-       buffer_fwd(i) = f_plus_kind(buffer_fwd(j), m_in(buffer_x_to_y%data(i)))
+       buffer_fwd(i) = f_plus_kind(buffer_fwd(j), m_inout(buffer_x_to_y%data(i)))
        j = i
     end do
 
-    buffer_bwd(N) = m_in(buffer_x_to_y%data(N))
+    ! Fill the total "sum"
+    if (present(total)) then
+       total = f_plus_kind(buffer_fwd(N-1), m_inout(buffer_x_to_y%data(N)))
+    end if
+
+    ! Fill the backwards buffer
+    buffer_bwd(N) = m_inout(buffer_x_to_y%data(N))
     j = N
     do i = N - 1, 2, -1
-       buffer_bwd(i) = f_plus_kind(buffer_bwd(j), m_in(buffer_x_to_y%data(i)))
+       buffer_bwd(i) = f_plus_kind(buffer_bwd(j), m_inout(buffer_x_to_y%data(i)))
        j = i
     end do
 
-    m_out(buffer_x_to_y%data(1)) = buffer_bwd(2)
+    ! Update the messages over the edges connected to this node
+    m_inout(buffer_x_to_y%data(1)) = buffer_bwd(2)
     do i = 2, buffer_x_to_y%N-1
-       m_out(buffer_x_to_y%data(i)) = f_plus_kind(buffer_fwd(i-1), buffer_bwd(i+1))
+       m_inout(buffer_x_to_y%data(i)) = f_plus_kind(buffer_fwd(i-1), buffer_bwd(i+1))
     end do
-    m_out(buffer_x_to_y%data(N)) = buffer_fwd(N-1)
+    m_inout(buffer_x_to_y%data(N)) = buffer_fwd(N-1)
 
-
-    if (present(total)) then
-       total = f_plus_kind(buffer_fwd(N-1), m_in(buffer_x_to_y%data(N)))
-    end if
+    ! Cleanup
     if (.not. present(B_buffer)) then
        deallocate(buffer_bwd)
     end if
@@ -295,7 +299,7 @@ contains
          log(1 + exp(-abs(x-y)))
   end function f_plus_box
 
-  subroutine process_vnode(buffer_v_to_e, llr_channel, llr_updated, Ne, m_c_to_v, m_v_to_c, B_buffer, F_buffer)
+  subroutine process_vnode(buffer_v_to_e, llr_channel, llr_updated, Ne, m_inout, B_buffer, F_buffer)
     !! Variable node A Posteriori Probability (APP) processing function
     type(TEdgeList), intent(in) :: buffer_v_to_e
     !! List of edges connected to the variable node being currently processed
@@ -307,10 +311,8 @@ contains
     !! of the variable node after processing
     integer, intent(in)   :: Ne
     !! Total number of edges in the LDPC code
-    real(wp), intent(in)  :: m_c_to_v(Ne)
-    !! Array of messages from check-nodes
-    real(wp), intent(out) :: m_v_to_c(Ne)
-    !! Array of messages to check-nodes
+    real(wp), intent(inout) :: m_inout(Ne)
+    !! Array of input messages, to be updated with output messages, one per edge
     real(wp), intent(inout), target, optional :: B_buffer(2:buffer_v_to_e%N)
     !! pre-allocated backwords buffer for partial message processing results
     real(wp), intent(inout), target, optional :: F_buffer(buffer_v_to_e%N-1)
@@ -321,24 +323,24 @@ contains
 
     if (buffer_v_to_e%N > 1) then
        if (present(B_buffer) .and. present(F_buffer)) then
-          call process_xnode(buffer_v_to_e, Ne, m_c_to_v, m_v_to_c, f_plus_add, total, B_buffer, F_buffer)
+          call process_xnode(buffer_v_to_e, Ne, m_inout, f_plus_add, total, B_buffer, F_buffer)
        else
-          call process_xnode(buffer_v_to_e, Ne, m_c_to_v, m_v_to_c, f_plus_add, total)
+          call process_xnode(buffer_v_to_e, Ne, m_inout, f_plus_add, total)
        end if
     else
-       total = m_c_to_v(buffer_v_to_e%data(1))
-       m_v_to_c(buffer_v_to_e%data(1)) = 0
+       total = m_inout(buffer_v_to_e%data(1))
+       m_inout(buffer_v_to_e%data(1)) = 0
     end if
 
     do i = 1, buffer_v_to_e%N
-       m_v_to_c(buffer_v_to_e%data(i)) = m_v_to_c(buffer_v_to_e%data(i)) + llr_channel
+       m_inout(buffer_v_to_e%data(i)) = m_inout(buffer_v_to_e%data(i)) + llr_channel
     end do
 
     llr_updated = total + llr_channel
   end subroutine process_vnode
 
 
-  subroutine process_cnode(buffer_c_to_e, s, Ne, m_v_to_c, m_c_to_v, B_buffer, F_buffer)
+  subroutine process_cnode(buffer_c_to_e, s, Ne, m_inout, B_buffer, F_buffer)
     !! Variable node A Posteriori Probability (APP) processing function
     type(TEdgeList), intent(in) :: buffer_c_to_e
     !! List of edges connected to the variable node being currently processed
@@ -346,10 +348,8 @@ contains
     !! Syndrome bit value associated to the checknode being currently processed
     integer, intent(in)   :: Ne
     !! Total number of edges in the LDPC code
-    real(wp), intent(in)  :: m_v_to_c(Ne)
-    !! Array of messages from variable nodes
-    real(wp), intent(out) :: m_c_to_v(Ne)
-    !! Array of messages to variable nodes
+    real(wp), intent(inout) :: m_inout(Ne)
+    !! Message buffer
     real(wp), intent(inout), target, optional :: B_buffer(2:buffer_c_to_e%N)
     !! pre-allocated backwords buffer for partial message processing results
     real(wp), intent(inout), target, optional :: F_buffer(buffer_c_to_e%N-1)
@@ -366,18 +366,18 @@ contains
 
     if (buffer_c_to_e%N < 2) then
        ! Very unlikely code design: it means a specific bit is known through the syndrome
-       m_c_to_v(buffer_c_to_e%data(1)) = sign_factor * 1e300_wp
+       m_inout(buffer_c_to_e%data(1)) = sign_factor * 1e300_wp
        return
     end if
 
     if (present(B_buffer) .and. present(F_buffer)) then
-       call process_xnode(buffer_c_to_e, Ne, m_v_to_c, m_c_to_v, f_plus_box, B_buffer=B_buffer, F_buffer=F_buffer)
+       call process_xnode(buffer_c_to_e, Ne, m_inout, f_plus_box, B_buffer=B_buffer, F_buffer=F_buffer)
     else
-       call process_xnode(buffer_c_to_e, Ne, m_v_to_c, m_c_to_v, f_plus_box)
+       call process_xnode(buffer_c_to_e, Ne, m_inout, f_plus_box)
     end if
 
     do i = 1, buffer_c_to_e%N
-       m_c_to_v(buffer_c_to_e%data(i)) = m_c_to_v(buffer_c_to_e%data(i)) * sign_factor
+       m_inout(buffer_c_to_e%data(i)) = m_inout(buffer_c_to_e%data(i)) * sign_factor
     end do
   end subroutine process_cnode
 
@@ -464,7 +464,7 @@ contains
     !! Maximum number of iterations (in), actual number of iterations (out)
     ! N_iterations is used to return the actual number of iterations
 
-    real(wp) :: m_c_to_v(this%Ne), m_v_to_c(this%Ne)
+    real(wp) :: edge_messages(this%Ne)
     integer :: it, i
 
     if (this%check_llr(llr_channel, synd)) then
@@ -473,20 +473,20 @@ contains
        return
     end if
 
-    m_c_to_v(:) = 0.0_wp
+    edge_messages(:) = 0
     do i = 1, this%vnum
        ! First round to propagate the channel LLRs to the checknodes inputs
-       call process_vnode(this%v_to_e(i), llr_channel(i), llr_updated(i), this%Ne, m_c_to_v, m_v_to_c)
+       call process_vnode(this%v_to_e(i), llr_channel(i), llr_updated(i), this%Ne, edge_messages)
     end do
 
     decoding_loop: do it = 1, N_iterations
        do i= 1, this%cnum
-          call process_cnode(this%c_to_e(i), synd(i), this%Ne, m_v_to_c, m_c_to_v, &
+          call process_cnode(this%c_to_e(i), synd(i), this%Ne, edge_messages, &
                this%B_buffer, this%F_buffer)
        end do
 
        do i = 1, this%vnum
-          call process_vnode(this%v_to_e(i), llr_channel(i), llr_updated(i), this%Ne, m_c_to_v, m_v_to_c, &
+          call process_vnode(this%v_to_e(i), llr_channel(i), llr_updated(i), this%Ne, edge_messages, &
                this%B_buffer, this%F_buffer)
        end do
 
