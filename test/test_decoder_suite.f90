@@ -135,15 +135,16 @@ contains
     llr(:) = 1.0_wp
 
     do i = 1, 8
-       call process_vnode(decoder%v_to_e(i), llr(i), llr_updated(i), 16, m_c_to_v, m_v_to_c)
+       call process_vnode(decoder%v_to_e(i), llr(i), llr_updated(i), 16, m_v_to_c)
     end do
 
     call check(error, all(abs(m_v_to_c - 1.0_wp) < 0.001_wp))
     if (allocated(error)) return
 
     m_v_to_c = [(1.0_wp+real(i, wp)*0.1_wp, i = 1, 16)]
+    m_c_to_v = m_v_to_c
     do i = 1, 5
-       call process_cnode(decoder%c_to_e(i), .false., 16, m_v_to_c, m_c_to_v)
+       call process_cnode(decoder%c_to_e(i), .false., 16, m_c_to_v)
     end do
 
     call check(error, all(abs(m_c_to_v(1:4) - [0.37544_wp, 0.34937_wp, 0.32782_wp, 0.30979_wp]) < 0.001_wp))
@@ -152,8 +153,9 @@ contains
     call check(error, all(abs(m_c_to_v(11:12) - [2.2_wp, 2.1_wp]) < 0.001_wp))
     if (allocated(error)) return
 
+    m_c_to_v = m_v_to_c
     do i = 1, 5
-       call process_cnode(decoder%c_to_e(i), .true., 16, m_v_to_c, m_c_to_v)
+       call process_cnode(decoder%c_to_e(i), .true., 16, m_c_to_v)
     end do
 
     call check(error, all(abs(m_c_to_v(1:4) + [0.37544_wp, 0.34937_wp, 0.32782_wp, 0.30979_wp]) < 0.001_wp))
