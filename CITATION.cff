@@ -1,0 +1,12 @@
+authors:
+- family-names: Origlia
+  given-names: Marco
+  orcid: 0000-0003-4901-4350
+cff-version: 1.2.0
+date-released: '2025-04-15'
+doi: 10.5281/zenodo.15221950
+license:
+- gpl-3.0-or-later
+message: If you use this software, please cite it using the metadata from this file.
+title: Fortran LDPC decoder
+type: software
